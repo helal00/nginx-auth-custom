@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+_srcsbinpath=$(dirname $(readlink -f $0))
+#echo "$(date): The arguments we got:" >> "$_srcsbinpath/authcmd.log"
+#for word in "$@"; do echo "$word" >> "$_srcsbinpath/authcmd.log"; done
+passfile=$1
+shift
+
+if pline=$(grep "^$1:.*$" "$passfile") ; then
+	thecryptpass=${pline/$1:/}
+	salt=${thecryptpass:0:2}
+	if getvpass="$(openssl passwd -salt "$salt" -noverify "$2" 2>&1)" ; then
+		if [ ! -z "$getvpass" ] && [  "$getvpass" = "$thecryptpass" ] ; then
+			echo "$2"
+			exit 0
+		else
+			echo "user \"$1\": password mismatch" 1>&2
+			exit 1 
+		fi
+	else
+		echo "Some error occured running openssl : $getvpass" 1>&2
+		exit 1 
+	fi
+else
+	echo "user \"$1\" was not found in database" 1>&2
+	exit 1 
+fi

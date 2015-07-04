@@ -1,0 +1,47 @@
+#possible key and values types
+#path = "path to protect" (required as first entry in a file, initiates a new path config. add trainling slash (/) if a directory)
+#max_ret_once = number (defaut = 3)
+#total_ret = number (defaut = 3)
+#total_ret_enf_sec = number in seconds (defaut = 1800)
+#realm = "string" (defaut = "=:servername:= Admins Login:( =:max_ret_once:= retries X =:total_ret:= times max in =:total_ret_enf_sec/60:= minutes )")
+#secret = "string" (required)
+#ck_name = "string" (defaut = path_with_underscore_auth, e.g /path/to/protect will be path_to_protect_auth)
+#ck_path = "string" (defaut = /)
+#ex_for_inactive = "yes/no" (defaut = yes)
+#use_ip = "yes/no" (defaut = yes)
+#expire_after = number in seconds (defaut = 900)
+#redir_qstr = "string" (defaut = checkforcookes)
+#method = "file/cmd" (defaut = file)
+#authwith = "path to a nginx basic auth password file (used with 'auth_basic_user_file' directives, this command 'echo username:$(openssl passwd -noverify passwordtouse) and place each in a single line.' on terminal) or the cmd with options. cmd must be quoted like "cmd" and options in "cmd '-p'" (required)
+#err_no_on_max = number (defaut = 404)
+#debug = "yes/no" (defaut = no)
+#debugtoresp = "yes/no" (defaut = no)
+#ck_html_file = "path to a html file"
+#ck_html = "html Sting"
+#ck_text = "string"
+#
+#After edit, apply 'nginx -s reload' to make the new settings effective.
+
+path = /dbadmin
+secret = mynewsecret
+authwith = /var/www/user/mydomain.com/.private/.pma_pass
+#ck_html_file = /usr/share/nginx/commons/errorpages/cookies-required.html
+
+path = /test
+secret = mynewsecret
+method = cmd
+authwith = "/usr/share/nginx/nginx-auth-custom/authbycmd '/var/www/user/mydomain.com/.private/.pma_pass'"
+#ck_html_file = /usr/share/nginx/commons/errorpages/cookies-required.html
+debug = true
+debugtoresp = true
+
+path = /auth
+secret = mynewsecret
+authwith = /var/www/user/mydomain.com/.private/.pma_pass
+
+path = /
+secret = mynewsecret
+authwith = /var/www/user/mydomain.com/.private/.pma_pass
+
+
+
