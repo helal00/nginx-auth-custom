@@ -74,7 +74,6 @@ end
 local addpath = function (dict,val)
 	dict = ngx.shared[dict]
 	if dict ~= nil then
-		--ngx.log(ngx.ERR, "dict is ok")
 		val="/" .. trim(val,"/")
 		local pathno = getvaldict("total_path",nil,dict)
 		if pathno == nil then
@@ -82,7 +81,6 @@ local addpath = function (dict,val)
 		else
 			for i = 1, pathno do
 				local lpath = dict:get("pno" .. tostring(i))
-				--ngx.say("got lpath:", tostring(lpath))
 				if lpath == val then
 					thedict = dict
 					thepath = "pno" .. tostring(i)
@@ -92,8 +90,6 @@ local addpath = function (dict,val)
 			end
 			pathno = pathno + 1
 		end
-		--ngx.log(ngx.ERR, "path no is ",pathno)
-		--ngx.log(ngx.ERR, "value is ",val)
 		if not addcommon("pno" .. tostring(pathno),val,dict) then
 			thedict = nil
 			thepath = nil

@@ -100,9 +100,7 @@ local setvaldict = function (key, pno, val, dict, expire)
 	end
 	return true
 end
--- lapth= /database ruri = /databaseme
--- lapth= /wp-login rui = /wp-login-me
--- lapth= /wp-login/ rui = /wp-login-me
+
 local configpath = function (requri,dict,prelog)
 	local path = nil
 	local pathno = nil
@@ -234,7 +232,6 @@ local temp_dict = breakonnil(ngx.shared[temp_dict_name],"We can't reference the 
 
 local auth_cookie = assignifempty(ngx.var["cookie_" .. auth_config['ck_name']])
 local auth_check_redir_value = assignifempty(ngx.var["arg_" .. auth_config['redir_qstr']])
---local auth_check_redir_path = auth_config['path'] .. "/?" .. auth_config['redir_qstr']
 local auth_check_redir_path = auth_config['path'] .. "?" .. auth_config['redir_qstr']
 
 local redirfinalval = auth_check_redir_value
@@ -427,9 +424,6 @@ local get_user = function (ckchk)
 			end
 		end
 	end
-	--if ngx.var.userpass_server ~= pass then
-		--return
-	--end
    
 	return
 end
@@ -488,7 +482,6 @@ end
 
 local ask_for_auth = function ()
 ngx.header.www_authenticate = 'Basic realm="' .. auth_config['realm'] .. '"'
---ngx.status = ngx.HTTP_UNAUTHORIZED
 return ngx.exit(ngx.HTTP_UNAUTHORIZED)
 end
 
@@ -497,12 +490,9 @@ local processslogin = function ()
 	logtofile(filetolog,logmode,"\n====================\n","The user we get : ",user)
 	if user then
 	   ngx.log(ngx.NOTICE, 'Authenticated : ' .. user)
-	   --local authcookie, token = set_auth_cookie(false)
-	   --ngx.header['Set-Cookie'] = authcookie
 	   setauthtoken()
 	   clear_retries()
 	   logtofile(filetolog,logmode,"\n====================\n","User : ",user," Authenticated")
-	   --ngx.redirect(ngx_request_uri)
 	   return ngx.exit(ngx.OK)
 	else
 	   if tostring(retries) == "max" then
@@ -520,25 +510,7 @@ if cookie ~= nil and cookie:find(":") ~= nil then
 	if redirfinalval ~= nil then
 		ngx.redirect(ngx.unescape_uri(redirfinalval))
 	end
-    --local divider = cookie:find(":")
-	--local hmac = ngx.decode_base64(cookie:sub(divider+1))
-	--local timestamp = cookie:sub(0, divider-1)
-	--local validtill = tonumber(timestamp) + auth_config['expire_after']
-	--local secret = nil
-	--local tokenstr = nil
-	--if auth_config['use_ip'] then
-		--secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. tostring(ngx_remote_addr) .. tostring(headers['user-agent'])
-		--tokenstr = tostring(ngx_remote_addr) .. tostring(validtill) .. tostring(headers['user-agent'])
-	--else
-		--secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. tostring(headers['user-agent'])
-		--tokenstr = tostring(validtill) .. tostring(headers['user-agent'])
-	--end
-	--if hmac ~= nil then
-		----usercookieid = ngx.escape_uri(cookie:sub(divider+1))
-		--usercookieid = hmac
-	--end
 
-	
 	local tokenok = false
 	local token = nil
 	local clip = nil
@@ -566,11 +538,6 @@ if cookie ~= nil and cookie:find(":") ~= nil then
 	end
 	logtofile(filetolog,logmode,"\nInto auth check : ", "usercookieid = ",usercookieid)
 	if tokenok then
-		--local authcookie, newtoken = nil, nil
-		--if auth_config['ex_for_inactive'] then
-			--authcookie, newtoken = set_auth_cookie(false)
-			--ngx.header['Set-Cookie'] = authcookie
-	   --end
 	    setauthtoken()
 		if debugresponse then
 			ngx.header.content_type = "text/plain"
