@@ -1,5 +1,5 @@
 #possible key and values types
-#path = "path to protect" (required as first entry in a file, initiates a new path config. add trainling slash (/) if a directory)
+#path = "path to protect" (required as first entry in a file, initiates a new path config.)
 #max_ret_once = number (defaut = 3)
 #total_ret = number (defaut = 3)
 #total_ret_enf_sec = number in seconds (defaut = 1800)
