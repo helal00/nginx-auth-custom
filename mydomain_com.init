@@ -12,7 +12,7 @@
 #expire_after = number in seconds (defaut = 900)
 #redir_qstr = "string" (defaut = checkforcookes)
 #method = "file/cmd" (defaut = file)
-#authwith = "path to a nginx basic auth password file (used with 'auth_basic_user_file' directives, this command 'echo username:$(openssl passwd -noverify passwordtouse)' on terminal and place each in a single line) or the any command with options if any. cmd must be quoted like "cmd" and options in "cmd '-p'" (required)
+#authwith = "path to a nginx basic auth password file (used with 'auth_basic_user_file' directives, this command 'echo username:$(openssl passwd -noverify passwordtouse)' on terminal and place each in a single line) or any command with or without options. cmd must be quoted like "cmd" and options in "cmd '-p'" (required)
 #err_no_on_max = number (defaut = 404)
 #debug = "yes/no" (defaut = no)
 #debugtoresp = "yes/no" (defaut = no)
