@@ -183,7 +183,8 @@ local getconfigkeys = function (keynm, config, nobreak)
 	end
 end
 
-local ngx_server_name = ngx.var.server_name
+--local ngx_server_name = ngx.var.server_name
+local ngx_server_name = ngx.var.host
 
 local getconfig = function ()
 	local config = {}
