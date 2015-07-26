@@ -14,4 +14,4 @@
 
 ##format: dictionary_name path/to/congfile(absolute path or relative path to current directory of this file)
 #mydomain_com_auth /var/xxxx/xxxxx/xxxxxx/mydomain_com.init
-mydomain_com_auth mydomain_com.init
+mydomain_com_auth mydomain_com.init.example
