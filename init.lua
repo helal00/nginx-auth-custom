@@ -88,7 +88,7 @@ end
 local addpath = function (dict,val)
 	dict = ngx.shared[dict]
 	if dict ~= nil then
-		val="/" .. trim(val,"/")
+		--val="/" .. trim(val,"/")
 		local pathno = getvaldict("total_path",nil,dict)
 		if pathno == nil then
 			pathno = 1
@@ -189,6 +189,9 @@ validoptions['realm'] = "string"
 validoptions['secret'] = "string"
 validoptions['ck_name'] = "string"
 validoptions['ck_path'] = "string"
+validoptions['ck_validtill'] = "number"
+validoptions['ck_subdomain'] = "string"
+validoptions['ck_httponly'] = "string"
 validoptions['ex_for_inactive'] = "string"
 validoptions['use_ip'] = "string"
 validoptions['expire_after'] = "number"
@@ -213,15 +216,18 @@ local endpathconfig = function ()
 	assignifempty("total_ret",2)
 	assignifempty("total_ret_enf_sec",1800)
 	assignifempty("realm","=:servername:= Admins Login:( =:max_ret_once:= retries X =:total_ret:= times max in =:total_ret_enf_sec/60:= minutes )")
-	assignifempty("secret", nil , 'Auth Secret is not set with "secret = mynewsecret" for path ' .. loc ..' in the config file set in ' .. scriptpath .. 'init.lua. Set it to something complicated to resume the authentication service.')
-	assignifempty("ck_name",loc_name .. "_auth")
+	assignifempty("secret", nil , 'Auth Secret is not set with "secret = mysecret" for path ' .. loc ..' in the config file set in ' .. scriptpath .. 'init.lua. Set it to something complicated to resume the authentication service.')
+	assignifempty("ck_name","bynginxauthcutsom")
 	assignifempty("ck_path","/")
+	assignifempty("ck_validtill",2147483647)
+	assignifempty("ck_subdomain",false)
+	assignifempty("ck_httponly",true)
 	assignifempty("ex_for_inactive",true)
 	assignifempty("use_ip",true)
 	assignifempty("expire_after",900)
 	assignifempty("redir_qstr", "checkforcookes")
 	assignifempty("method", "file")
-	assignifempty("authwith", nil, 'File or Commands is not given or not exist to authentice user against. Please provide a valid file path, if your method is file (default) or a command, if your method is command in the ' .. scriptpath .. 'init.lua file with "additem("authwith", "/path/to/passwd/file")".','method','file','fexist')
+	assignifempty("authwith", nil, 'File or Commands is not given or not exist to authentice user against. Please provide a valid file path, if your method is file (default) or a command. See ' .. scriptpath .. 'mydomain_com.init.example file with for more details.','method','file','fexist')
 	assignifempty("err_no_on_max", 404)
 	assignifempty("debug", false)
 	assignifempty("debugtoresp", false)

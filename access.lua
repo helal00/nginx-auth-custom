@@ -116,19 +116,23 @@ local setvaldict = function (key, pno, val, dict, expire)
 	return true
 end
 
-local configpath = function (requri,dict,prelog)
+local configpath = function (requri,host,dict,prelog)
 	local path = nil
 	local pathno = nil
 	local requriwslash = nil
+	local requriwhost = host .. requri
+	local requriwhostwslash = nil
 	if requri ~= "/" then
 		requriwslash = requri .. "/"
+		requriwhostwslash = host .. requri .. "/"
 	end
+
 	local totalpath = dict:get("total_path")
 	prelog = "\n====================\ntotal_path = " .. totalpath
 	for i = 1, totalpath do
 		local lpath = dict:get("pno" .. tostring(i))
 		prelog = prelog .. "\npno" .. tostring(i) .. " : " .. tostring(lpath)
-		if requri:find(lpath) == 1 or (requriwslash ~= nil and requriwslash:find(lpath) == 1) then
+		if requriwhost:find(lpath) == 1 or (requriwhostwslash ~= nil and requriwhostwslash:find(lpath) == 1) or requri:find(lpath) == 1 or (requriwslash ~= nil and requriwslash:find(lpath) == 1) then
 			if path then
 				if lpath:len() > path:len() then
 					path = lpath
@@ -192,7 +196,7 @@ local getconfig = function ()
 	config['dict_name'] = breakonnil(assignifempty(ngx.var.lua_auth_dict_name),'Auth Dictonary Name is not set with "set $lua_auth_dict_nam xxxxxxxxxxxx;" in server context. Set it to a configuration dictionary name as per init.lua file to resume the authentication service.')
 	prelog = prelog .. "\ndict_name = " .. config['dict_name']
 	config['dict'] = breakonnil(ngx.shared[config['dict_name']],"We can't reference the dictionary named: " .. config['dict_name'])
-	config['pathno'] , config['path'], prelog = configpath(ngx_request_uri,config['dict'],prelog)
+	config['pathno'] , config['path'], prelog = configpath(ngx_request_uri,ngx_server_name,config['dict'],prelog)
 	breakonnil(config['pathno'],'We cannot find any defined path as for the request ' .. ngx_request_uri .. '. Add a appropiate path in init.lua file to resume the authentication service.')
 	
 	if debugmode then
@@ -224,6 +228,9 @@ local getconfig = function ()
 	config=getconfigkeys('realm',config)
 	config=getconfigkeys('ck_name',config)
 	config=getconfigkeys('ck_path',config)
+	config=getconfigkeys('ck_validtill',config)
+	config=getconfigkeys('ck_subdomain',config)
+	config=getconfigkeys('ck_httponly',config)
 	config=getconfigkeys('ex_for_inactive',config)
 	config=getconfigkeys('use_ip',config)
 	config=getconfigkeys('expire_after',config)
@@ -265,24 +272,26 @@ local cookie = auth_cookie
 local retries = 0
 local retries_total = 0
 local usercookieid = nil
+local gotcookieid = nil
 local ngx_remote_addr = ngx.var.remote_addr
 local sendauthlog = false
 local userchecked = false
 local userfound = nil
+local uahash = ngx.md5(tostring(headers['user-agent']))
 
 logtofile(filetolog,logmode,"\n====================\n","Requested uri: ",ngx_request_uri);
 logtofile(filetolog,logmode,"\n====================\n","The auth cookie we got: ",cookie)
 
 local setauthtoken = function ()
 	if auth_config['use_ip'] then
-		return setvaldict(usercookieid,auth_config['pathno'] .. "_authed",userfound .. ":" .. ngx_remote_addr,temp_dict,auth_config['expire_after'])
+		return setvaldict(usercookieid,ngx_server_name .. "_" .. auth_config['pathno'] .. "_authed",userfound .. ":" .. uahash .. ":" .. ngx_remote_addr,temp_dict,auth_config['expire_after'])
 	else
-		return setvaldict(usercookieid,auth_config['pathno'] .. "_authed",userfound,temp_dict,auth_config['expire_after'])
+		return setvaldict(usercookieid,ngx_server_name .. "_" .. auth_config['pathno'] .. "_authed",userfound .. ":" .. uahash,temp_dict,auth_config['expire_after'])
 	end
 end
 
 local getauthtoken = function ()
-return assignifempty(getvaldict(usercookieid,auth_config['pathno'] .. "_authed",temp_dict))
+	return assignifempty(getvaldict(usercookieid,ngx_server_name .. "_" .. auth_config['pathno'] .. "_authed",temp_dict))
 end
 
 local set_retries = function ()
@@ -291,7 +300,7 @@ local set_retries = function ()
 	end
 	local nextval = nil
 	local retval = true
-	local retriesval = assignifempty(getvaldict(usercookieid,auth_config['pathno'],temp_dict))
+	local retriesval = assignifempty(getvaldict(usercookieid,ngx_server_name .. "_" .. auth_config['pathno'],temp_dict))
 	if retriesval ~= nil then
 		local divider = retriesval:find(':')
 		if divider ~= nil then
@@ -311,12 +320,12 @@ local set_retries = function ()
 		nextval = "1:1"
 	end
 	if nextval ~= nil then
-		setvaldict(usercookieid,auth_config['pathno'],nextval,temp_dict,auth_config['total_ret_enf_sec'])
+		setvaldict(usercookieid,ngx_server_name .. "_" .. auth_config['pathno'],nextval,temp_dict,auth_config['total_ret_enf_sec'])
 	end
 	return true
 end
 local clear_retries = function ()
-	setvaldict(usercookieid,auth_config['pathno'],nil,temp_dict,1)
+	setvaldict(usercookieid,ngx_server_name .. "_" .. auth_config['pathno'],nil,temp_dict,1)
 end
 
 local check_retries = function ()
@@ -445,54 +454,51 @@ local get_user = function (ckchk)
 end
 
 local isvalidcookieid = function ()
-	local expires_after = 31536000
 	local divider = cookie:find(":")
 	local hmac = ngx.decode_base64(cookie:sub(divider+1))
 	local timestamp = cookie:sub(1, divider-1)
-	local validtill = tonumber(timestamp) + expires_after
-	local secret = nil
-	local tokenstr = nil
-	if auth_config['use_ip'] then
-		secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. tostring(ngx_remote_addr) .. tostring(headers['user-agent'])
-		tokenstr = tostring(ngx_remote_addr) .. tostring(validtill) .. tostring(headers['user-agent']) .. auth_config['secret']
-	else
-		secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. tostring(headers['user-agent'])
-		tokenstr = tostring(validtill) .. tostring(headers['user-agent']) .. auth_config['secret']
-
-	end
+	--2^31 - 1 = 2147483647 = 2038-01-19 04:14:07
+	local validtill = 2147483647
+	local expires_after = validtill-timestamp
+	local secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. auth_config['secret'] .. tostring(expires_after)
+	local tokenstr = auth_config['secret'].. tostring(validtill) .. auth_config['secret'] .. auth_config['secret'] .. tostring(timestamp) .. tostring(expires_after)
+	
 	logtofile(filetolog,logmode,"\n====================\n","The hmac we get : ",hmac, " :it should: ", ngx.hmac_sha1(secret, tokenstr))
+	
 	if ngx.hmac_sha1(secret, tokenstr) == hmac and validtill >= ngx.time() then
 		if hmac ~= nil then
 			usercookieid = hmac
 		end
 		return true
 	else
+		gotcookieid = hmac
 		return false
 	end
 end
 
 local set_auth_cookie = function ()
-	local expires_after = 31536000
 	local timestamp = ngx.time()
-	local validtill = timestamp + expires_after
-	local secret = nil
-	local tokenstr = nil
-	if auth_config['use_ip'] then
-		secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. tostring(ngx_remote_addr) .. tostring(headers['user-agent'])
-		tokenstr = tostring(ngx_remote_addr) .. tostring(validtill) .. tostring(headers['user-agent']) .. auth_config['secret']
-	else
-		secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. tostring(headers['user-agent'])
-		tokenstr = tostring(validtill) .. tostring(headers['user-agent']) .. auth_config['secret']
+	--2^31 - 1 = 2147483647 = 2038-01-19 04:14:07
+	local validtill = auth_config['ck_validtill']
+	local expires_after = validtill-timestamp
+	local secret = auth_config['secret'] .. tostring(timestamp) .. auth_config['secret'] .. tostring(validtill) .. auth_config['secret'] .. tostring(expires_after)
+	local tokenstr = auth_config['secret'].. tostring(validtill) .. auth_config['secret'] .. auth_config['secret'] .. tostring(timestamp) .. tostring(expires_after)
 
-	end
-		
-	local token = timestamp .. ":" .. ngx.encode_base64(ngx.hmac_sha1(
-       secret,
-       tokenstr))
+	local token = timestamp .. ":" .. ngx.encode_base64(ngx.hmac_sha1(secret,tokenstr))
     local cookie = auth_config['ck_name'] .. "=" .. token .. "; "
-	cookie = cookie .. "Path=" .. auth_config['ck_path'] .. "; Domain=" .. ngx_server_name .. "; "
+    local domain = ""
+    if auth_config['ck_subdomain'] then
+		domain = "." .. ngx_server_name
+    else
+		domain = ngx_server_name
+    end
+	cookie = cookie .. "Path=" .. auth_config['ck_path'] .. "; Domain=" .. domain .. "; "
 	cookie = cookie .. "Expires=" .. ngx.cookie_time(validtill) .. "; "
-	cookie = cookie .. "; Max-Age=" .. expires_after .. "; HttpOnly"
+    if auth_config['ck_httponly'] then
+		cookie = cookie .. "; Max-Age=" .. expires_after .. "; HttpOnly"
+    else
+		cookie = cookie .. "; Max-Age=" .. expires_after
+    end
 	return cookie,token
 end
 
@@ -537,17 +543,36 @@ if cookie ~= nil and cookie:find(":") ~= nil then
 			if auth_config['use_ip'] then
 				local divider = token:find(":")
 				if divider ~= nil then
-					cluser = token:sub(1,divider-1)
-					clip = token:sub(divider+1)
+					local divider2 = token:find(":",divider+1)
+					if divider2 ~= nil then
+						cluser = token:sub(1,divider-1)
+						clua = token:sub(divider+1,divider2-1)
+						clip = token:sub(divider2+1)
+					end
 				end
 			else
-				cluser = token
+				local divider = token:find(":")
+				if divider ~= nil then
+					cluser = token:sub(1,divider-1)
+					clua = token:sub(divider+1)
+				end
 			end
 		end
+	else
+		local retriedlog = assignifempty(getvaldict(gotcookieid,ngx_server_name .. "_" .. auth_config['pathno'],temp_dict))
+		if retriedlog == nil then
+			local reauthcookie = (set_auth_cookie())
+			ngx.header['Set-Cookie'] = reauthcookie
+			return ngx.redirect(ngx_request_uri)
+		else
+			return ngx.exit(ngx.HTTP_FORBIDDEN)
+		end
 	end
-	if cluser ~= nil and cluser == get_user(false) then
-		if auth_config['use_ip'] and  clip == ngx_remote_addr then
-			tokenok = true
+	if cluser ~= nil and cluser == get_user(false) and clua == uahash then
+		if auth_config['use_ip'] then
+			if clip == ngx_remote_addr then
+				tokenok = true
+			end
 		else
 			tokenok = true
 		end

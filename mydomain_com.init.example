@@ -13,7 +13,7 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #possible key and values types
-#path = "path to protect" (required as first entry in a file, initiates a new path config.)
+#path = "path to protect" (required as first entry in a file, initiates a new path config.) path with host (host.com/path) or without host (/path) . so the initial / is important, include it if you want to apply it for all host configured.
 #max_ret_once = number (defaut = 3)
 #total_ret = number (defaut = 3)
 #total_ret_enf_sec = number in seconds (defaut = 1800)
@@ -28,8 +28,8 @@
 #method = "file/cmd" (defaut = file)
 #authwith = "path to a nginx basic auth password file (used with 'auth_basic_user_file' directives, this command 'echo username:$(openssl passwd -noverify passwordtouse)' on terminal and place each in a single line) or any command with or without options. cmd must be quoted like "cmd" and options in "cmd '-p'" (required)
 #err_no_on_max = number (defaut = 404)
-#debug = "yes/no" (defaut = no)
-#debugtoresp = "yes/no" (defaut = no)
+#debug = "yes/no" (defaut = no)  Will log in file {directory of access.lua}/auth.out.log
+#debugtoresp = "yes/no" (defaut = no) Will echo back the request in details as response.
 #ck_html_file = "path to a html file"
 #ck_html = "html Sting"
 #ck_text = "string"
@@ -40,6 +40,12 @@ path = /dbadmin
 secret = mynewsecret
 authwith = /var/www/user/mydomain.com/.private/.pma_pass
 #ck_html_file = /usr/share/nginx/commons/errorpages/cookies-required.html
+
+path = mydomain.com/dbadmin
+secret = mynewsecret
+authwith = /var/www/user/mydomain.com/.private/.pma_pass
+ck_html_file = /usr/share/nginx/commons/http-error-pages/errorpages/cookies-required.html
+debug = true
 
 path = /test
 secret = mynewsecret
